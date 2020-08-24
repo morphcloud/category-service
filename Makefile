@@ -21,13 +21,20 @@ test-bench:
 test-cover:
 	go test -cover ./...
 
+.PHONY: format
 format:
 	gofmt -w ./..
 
+.PHONY: docker-build
 docker-build:
-	docker build -t order-service-image:1.0.0 .
+	docker build -t hzhyvinskyi/morphcloud-order-service:1.0.0 .
 
+.PHONY: docker-run
 docker-run:
-	docker run -d -p 8081:8081 --name order-service-container order-service-image:1.0.0
+	docker run -d -p 8081:8081 --name morphcloud-order-service-container hzhyvinskyi/morphcloud-order-service:1.0.0
+
+.PHONY: docker-push
+docker-push:
+	docker push hzhyvinskyi/morphcloud-order-service:1.0.0
 
 .DEFAULT_GOAL := build-and-run

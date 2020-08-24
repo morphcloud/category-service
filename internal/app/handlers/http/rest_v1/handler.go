@@ -1,4 +1,4 @@
-package v1
+package rest_v1
 
 import (
 	"net/http"
@@ -7,6 +7,7 @@ import (
 	"github.com/mailru/easyjson"
 
 	"github.com/morphcloud/order-service/internal/app/services"
+	"github.com/morphcloud/order-service/pkg/http_response"
 )
 
 type OrderHandler interface {
@@ -33,7 +34,8 @@ func (h *orderHandler) FindAll(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
 
-	if _, _, err = easyjson.MarshalToHTTPResponseWriter(orders, w); err != nil {
+	resp := http_response.MultipleJSONResponse{Data: orders}
+	if _, _, err = easyjson.MarshalToHTTPResponseWriter(resp, w); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
 }

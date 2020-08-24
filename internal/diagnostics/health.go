@@ -13,7 +13,6 @@ func ReadinessHandler(l *log.Logger) http.HandlerFunc {
 	}
 }
 
-
 func LivenessHandler(l *log.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		l.Println("Liveness probe")

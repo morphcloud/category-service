@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -16,6 +17,28 @@ import (
 	"github.com/morphcloud/order-service/internal/routes"
 )
 
+var (
+	appName, lisAddr string
+)
+
+func configureEnv() {
+	if err := godotenv.Load(); err != nil {
+		log.Fatalln(err)
+	}
+
+	appName = os.Getenv("APP_NAME")
+	if appName == "" {
+		appName = "order-service"
+	}
+
+	lisAddr = os.Getenv("PORT")
+	if lisAddr == "" {
+		log.Fatalln("Port is not set")
+	} else {
+		lisAddr = ":" + lisAddr
+	}
+}
+
 func waitForShutdown(srv http.Server, l *log.Logger) {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
@@ -23,25 +46,18 @@ func waitForShutdown(srv http.Server, l *log.Logger) {
 	sig := <-sigChan
 	l.Println("Graceful shutdown:", sig)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 15 * time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 	srv.Shutdown(ctx)
 }
 
 func main() {
-	ctx, cancel := context.WithTimeout(context.Background(), 10 * time.Second)
+	configureEnv()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 
-	l := log.New(os.Stdout, "API ", log.LstdFlags)
-
-	if err := godotenv.Load(); err != nil {
-		l.Fatalln(err)
-	}
-
-	port := os.Getenv("PORT")
-	if port == "" {
-		log.Fatalln("Port is not set.")
-	}
+	l := log.New(os.Stdout, strings.ToUpper(appName)+" ", log.LstdFlags)
 
 	mongoClient, err := database.NewMongoClient(ctx)
 	if err != nil {
@@ -50,16 +66,15 @@ func main() {
 	defer mongoClient.Disconnect(ctx)
 
 	router := mux.NewRouter()
-
 	routes.MapURLPathsToHandlers(router, mongoClient, l)
 
 	srv := http.Server{
-		Addr:              ":"+port,
-		Handler:           router,
-		ErrorLog:          l,
-		ReadTimeout:       10 * time.Second,
-		WriteTimeout:      20 * time.Second,
-		IdleTimeout:       30 * time.Second,
+		Addr:         lisAddr,
+		Handler:      router,
+		ErrorLog:     l,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		IdleTimeout:  20 * time.Second,
 	}
 
 	go func() {
@@ -67,7 +82,7 @@ func main() {
 			l.Fatalln(err)
 		}
 	}()
-	l.Println("Service has been started")
+	l.Printf("%s has been started on %s\n", appName, lisAddr)
 
 	waitForShutdown(srv, l)
 }
